@@ -8,6 +8,9 @@ SettingTwoTone,
 AppstoreTwoTone,
 ShopTwoTone,
 IdcardTwoTone,
+EnvironmentOutlined,
+  PhoneOutlined,
+  GlobalOutlined,
 } from "@ant-design/icons";
 import React, { useMemo, useRef, useState } from "react";
 import {
@@ -28,6 +31,7 @@ import {
 } from "antd";
 import { UserOutlined } from "@ant-design/icons";
 import dayjs, { Dayjs } from "dayjs";
+import { Table } from "antd";
 
 // Pro Components (includes ProTable types/comp)
 import {
@@ -81,6 +85,7 @@ function AppHeader({
 
 
 /* ------------------- Types & Mock Data ------------------- */
+
 type Row = {
   id: string;
   state: string;
@@ -90,8 +95,17 @@ type Row = {
   lastOrderDate: string; // ISO (YYYY-MM-DD)
 };
 
+
+
 type NumberRange = { min?: number; max?: number };
 type DateRange = { start?: Dayjs; end?: Dayjs; noEnd?: boolean };
+
+type AggOp = "none" | "sum" | "avg" | "min" | "max" | "count";
+type Aggregations = Record<string, AggOp>;   // columnKey -> op
+type GroupBy = string[];                     // ordered list (we’ll respect this order)
+
+const NUMERIC_COLS = ["totalSales", "orders"];          // numeric-only
+const GROUPABLE_COLS = ["state", "category"];           // text/date etc. you allow grouping on
 
 type FiltersState = {
   state?: string[];
@@ -127,6 +141,13 @@ const mockRows: Row[] = Array.from({ length: 120 }).map((_, i) => {
   };
 });
 
+type GroupRow = Row & {
+  __group?: boolean;
+  __groupKey?: string;  // concatenated key of group values
+  children?: Row[];
+};
+
+
 /* ----------------------- Helpers ----------------------- */
 // AntD column filter API expects React.Key[]; pack objects to strings.
 const packKey = (o: unknown): React.Key => JSON.stringify(o);
@@ -156,9 +177,45 @@ const dateInRange = (d: Dayjs, range?: DateRange) => {
   return true;
 };
 
+const aggregateRows = (rows: Row[], aggs: Aggregations) => {
+  const base: Partial<Row> = {};
+  NUMERIC_COLS.forEach((key) => {
+    const op = aggs[key];
+    if (!op || op === "none") return;
+
+    const values = rows.map((r) => r[key as keyof Row] as number);
+
+    switch (op) {
+      case "sum":
+        base[key as keyof Row] = values.reduce((a, b) => a + b, 0) as any;
+        break;
+      case "avg":
+        base[key as keyof Row] = (values.reduce((a, b) => a + b, 0) / Math.max(1, values.length)) as any;
+        break;
+      case "min":
+        base[key as keyof Row] = Math.min(...values) as any;
+        break;
+      case "max":
+        base[key as keyof Row] = Math.max(...values) as any;
+        break;
+      case "count":
+        base[key as keyof Row] = values.length as any;
+        break;
+    }
+  });
+  return base;
+};
+
+
 /* ------------- Report Builder (advanced table) ------------- */
 function ReportBuilderTable() {
   const actionRef = useRef<ActionType | null>(null);
+
+  // Aggregation & Grouping state (must be before columns useMemo)
+  const [aggOpen, setAggOpen] = useState(false);
+  const [groupOpen, setGroupOpen] = useState(false);
+  const [aggs, setAggs] = useState<Aggregations>({});
+  const [groupBy, setGroupBy] = useState<GroupBy>([]);
 
   // Controlled filters / sorter / columnsState
   const [filters, setFilters] = useState<FiltersState>({});
@@ -173,6 +230,51 @@ function ReportBuilderTable() {
     setCategoryOptions(CATEGORIES.map((c) => ({ label: c, value: c })));
   };
 
+  const filteredData: Row[] = useMemo(() => {
+    return mockRows.filter((r) => {
+      if (filters.state && filters.state.length > 0 && !filters.state.includes(r.state)) return false;
+      if (filters.category && filters.category.length > 0 && !filters.category.includes(r.category)) return false;
+      if (!numericInRange(r.totalSales, filters.totalSales)) return false;
+      if (!numericInRange(r.orders, filters.orders)) return false;
+      if (!dateInRange(dayjs(r.lastOrderDate, "YYYY-MM-DD"), filters.lastOrderDate)) return false;
+      return true;
+    });
+  }, [filters]);
+
+  // Build grouped data (depends on filters, groupBy, and aggs)
+  const groupedData: GroupRow[] = useMemo(() => {
+    if (groupBy.length === 0) return filteredData as GroupRow[];
+
+    const by = groupBy;
+    const map = new Map<string, Row[]>();
+
+    filteredData.forEach((r) => {
+      const key = by.map((k) => (r as any)[k]).join("||");
+      const list = map.get(key);
+      if (list) list.push(r);
+      else map.set(key, [r]);
+    });
+
+    const result: GroupRow[] = [];
+    map.forEach((rows, key) => {
+      const agg = aggregateRows(rows, aggs);
+      result.push({
+        id: `group-${key}`,
+        state: rows[0].state,
+        category: rows[0].category,
+        totalSales: (agg.totalSales as number) ?? 0,
+        orders: (agg.orders as number) ?? 0,
+        lastOrderDate: rows[0].lastOrderDate,
+        __group: true,
+        __groupKey: key,
+        children: rows,
+      });
+    });
+
+    result.sort((a, b) => (String(a.__groupKey) > String(b.__groupKey) ? 1 : -1));
+    return result;
+  }, [filteredData, groupBy, aggs]);
+
   const columns = useMemo<ProColumns<Row>[]>(() => {
     const cols: ProColumns<Row>[] = [
       {
@@ -186,6 +288,15 @@ function ReportBuilderTable() {
         filteredValue: (filters.state as React.Key[] | undefined) ?? null,
         onFilter: () => true,
         sorter: (a, b) => a.state.localeCompare(b.state),
+        render: (_, record: any) => {
+    if (record.__group) {
+      // pretty group label using chosen groupBy columns
+      const parts = record.__groupKey.split("||");
+      const label = groupBy.map((k, i) => `${k}: ${parts[i]}`).join(" · ");
+      return <span className="font-semibold">{label}</span>;
+    }
+    return record.state;
+  },
       },
       {
         title: "Category",
@@ -455,18 +566,7 @@ function ReportBuilderTable() {
       },
     ];
     return cols;
-  }, [filters, categoryOptions]);
-
-  const filteredData: Row[] = useMemo(() => {
-    return mockRows.filter((r) => {
-      if (filters.state && filters.state.length > 0 && !filters.state.includes(r.state)) return false;
-      if (filters.category && filters.category.length > 0 && !filters.category.includes(r.category)) return false;
-      if (!numericInRange(r.totalSales, filters.totalSales)) return false;
-      if (!numericInRange(r.orders, filters.orders)) return false;
-      if (!dateInRange(dayjs(r.lastOrderDate, "YYYY-MM-DD"), filters.lastOrderDate)) return false;
-      return true;
-    });
-  }, [filters]);
+  }, [filters, categoryOptions, groupBy]);
 
   const handleTableChange = (_p: any, _f: any, sorterParam: any) => {
     const s: SorterState = sorterParam?.order
@@ -527,64 +627,123 @@ function ReportBuilderTable() {
     }
   };
 
-  const activeChips: Array<{ key: keyof FiltersState; label: string; value: string }> = [];
-  if (filters.state?.length) activeChips.push({ key: "state", label: "State", value: filters.state.join(", ") });
-  if (filters.category?.length) activeChips.push({ key: "category", label: "Category", value: filters.category.join(", ") });
+  // ---------------- Chips (Filters, Grouping, Aggregations) ----------------
+  type Chip = {
+    kind: "filter" | "group" | "agg";
+    key: string;              // filter field OR group/agg column key
+    label: string;            // e.g., "State", "Grouping", "Aggregations"
+    value: string;            // human text
+  };
+
+  const chips: Chip[] = [];
+
+  // Filter chips
+  if (filters.state?.length) chips.push({ kind: "filter", key: "state", label: "State", value: filters.state.join(", ") });
+  if (filters.category?.length) chips.push({ kind: "filter", key: "category", label: "Category", value: filters.category.join(", ") });
   if (filters.totalSales && (filters.totalSales.min !== undefined || filters.totalSales.max !== undefined)) {
-    activeChips.push({ key: "totalSales", label: "Total Sales", value: `${filters.totalSales.min ?? "–"} to ${filters.totalSales.max ?? "–"}` });
+    chips.push({
+      kind: "filter",
+      key: "totalSales",
+      label: "Total Sales",
+      value: `${filters.totalSales.min ?? "–"} to ${filters.totalSales.max ?? "–"}`,
+    });
   }
   if (filters.orders && (filters.orders.min !== undefined || filters.orders.max !== undefined)) {
-    activeChips.push({ key: "orders", label: "Orders", value: `${filters.orders.min ?? "–"} to ${filters.orders.max ?? "–"}` });
+    chips.push({
+      kind: "filter",
+      key: "orders",
+      label: "Orders",
+      value: `${filters.orders.min ?? "–"} to ${filters.orders.max ?? "–"}`,
+    });
   }
   if (filters.lastOrderDate && (filters.lastOrderDate.start || filters.lastOrderDate.end || filters.lastOrderDate.noEnd)) {
     const s = filters.lastOrderDate.start?.format("YYYY-MM-DD") ?? "—";
     const e = filters.lastOrderDate.noEnd ? "No end" : filters.lastOrderDate.end?.format("YYYY-MM-DD") ?? "—";
-    activeChips.push({ key: "lastOrderDate", label: "Last Order Date", value: `${s} → ${e}` });
+    chips.push({ kind: "filter", key: "lastOrderDate", label: "Last Order Date", value: `${s} → ${e}` });
   }
+
+  // Grouping chips (one per selected group column)
+  groupBy.forEach((g) => {
+    chips.push({ kind: "group", key: g, label: "Grouping", value: g });
+  });
+
+  // Aggregation chips (one per numeric col with an op)
+  Object.entries(aggs)
+    .filter(([, op]) => op && op !== "none")
+    .forEach(([col, op]) => {
+      chips.push({ kind: "agg", key: col, label: "Aggregations", value: `${col}=${op}` });
+    });
 
   return (
     <div className="p-6">
       {/* Header row inside content */}
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-semibold">Sales Report — ProTable Demo</h1>
+        {/* Header row inside content */}
+
+  
         <div className="flex gap-2">
+
           <Button onClick={clearAll}>Clear All</Button>
           <Button onClick={() => setSaveOpen("save")}>Save</Button>
           <Button type="primary" onClick={() => setSaveOpen("saveAsNew")}>Save As New</Button>
         </div>
       </div>
 
-      {/* Filter Summary */}
+      {/* Filters & Settings (chips with X to remove) */}
       <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-3">
-        <div className="mb-2 text-sm font-medium">Filter Summary</div>
-        {activeChips.length === 0 ? (
-          <div className="text-sm text-gray-500">No active filters.</div>
-        ) : (
+        <div className="mb-2 text-sm font-medium">Filters & Settings</div>
+
+        {chips.length > 0 ? (
           <Space wrap>
-            {activeChips.map((chip) => (
+            {chips.map((chip, idx) => (
               <Tag
-                key={chip.key}
+                key={`${chip.kind}-${chip.key}-${idx}`}
                 closable
                 onClose={(e) => {
                   e.preventDefault();
-                  removeFilter(chip.key);
+                  if (chip.kind === "filter") {
+                    // remove just this filter
+                    removeFilter(chip.key as keyof FiltersState);
+                  } else if (chip.kind === "group") {
+                    // remove this group column
+                    setGroupBy((prev) => prev.filter((k) => k !== chip.key));
+                  } else if (chip.kind === "agg") {
+                    // clear this aggregation op
+                    setAggs((prev) => ({ ...prev, [chip.key]: "none" }));
+                  }
                 }}
               >
                 <span className="font-medium">{chip.label}:</span>&nbsp;{chip.value}
               </Tag>
             ))}
           </Space>
+        ) : (
+          <div className="text-sm text-gray-500">No active settings or filters.</div>
         )}
       </div>
 
       {/* Table */}
-      <ProTable<Row>
+   <ProTable<GroupRow>
   key={tableKey}
   actionRef={actionRef as any}
   rowKey="id"
   search={false}
+  headerTitle={
+    // LEFT side of the toolbar
+    <Space>
+      <Button onClick={() => setAggOpen(true)}>Aggregate</Button>
+      <Button onClick={() => setGroupOpen(true)}>Grouping</Button>
+    </Space>
+  }
+
+  options={{
+    density: true,
+    fullScreen: true,
+    setting: { listsHeight: 400 }, // gear icon (column settings)
+  }}
   columns={columns}
-  dataSource={filteredData}
+  dataSource={groupedData as GroupRow[]}
   onChange={handleTableChange}
   columnsState={{
     persistenceKey: "report-columns-v2",
@@ -594,12 +753,141 @@ function ReportBuilderTable() {
   scroll={{ x: 1100 }}
   sticky
   pagination={{ pageSize: 10, showSizeChanger: true }}
-  options={{
-    density: true,
-    fullScreen: true,
-    setting: { listsHeight: 400 }, // 👈 gear icon (column settings)
+
+  expandable={
+    groupBy.length
+      ? {
+          defaultExpandAllRows: true,
+          rowExpandable: (r) => !!(r as any).__group, // only group headers are expandable
+        }
+      : undefined
+  }
+  summary={(pageData) => {
+    // If grouping is active, show aggregates in group headers only
+    if (groupBy.length > 0) return null;
+
+    // pageData here are plain rows (no groups) because grouping is off
+    const rows = pageData as Row[];
+
+    // Compute aggregates for the numeric columns only, based on selected ops
+    const aggValue: Record<string, number | string | undefined> = {};
+    NUMERIC_COLS.forEach((key) => {
+      const op = aggs[key];
+      if (!op || op === "none") return;
+      const values = rows.map((r) => r[key as keyof Row] as number);
+
+      if (values.length === 0) return;
+
+      switch (op) {
+        case "sum":
+          aggValue[key] = values.reduce((a, b) => a + b, 0);
+          break;
+        case "avg":
+          aggValue[key] = (values.reduce((a, b) => a + b, 0) / values.length).toFixed(2);
+          break;
+        case "min":
+          aggValue[key] = Math.min(...values);
+          break;
+        case "max":
+          aggValue[key] = Math.max(...values);
+          break;
+        case "count":
+          aggValue[key] = values.length;
+          break;
+      }
+    });
+
+    // Render a summary row aligned to whatever columns are currently visible
+    return (
+      <Table.Summary fixed>
+        <Table.Summary.Row>
+          {columns.map((col, idx) => {
+            // ProColumns can have dataIndex as string | string[] | undefined
+            const dataKey =
+              (Array.isArray(col.dataIndex) ? col.dataIndex.join(".") : (col.dataIndex as string)) ||
+              (col.key as string) ||
+              "";
+
+            // First cell = label
+            if (idx === 0) {
+              return (
+                <Table.Summary.Cell index={idx} key={`sum-${idx}`}>
+                  <span className="font-semibold">Aggregations</span>
+                </Table.Summary.Cell>
+              );
+            }
+
+            // Show value only for numeric columns we aggregated; empty for others
+            const val = aggValue[dataKey];
+            return (
+              <Table.Summary.Cell index={idx} key={`sum-${idx}`}>
+                {val ?? ""}
+              </Table.Summary.Cell>
+            );
+          })}
+        </Table.Summary.Row>
+      </Table.Summary>
+    );
   }}
 />
+
+
+      {/* Grouping Modal */}
+      <Modal
+        title="Configure Grouping"
+        open={groupOpen}
+        onOk={() => setGroupOpen(false)}
+        onCancel={() => setGroupOpen(false)}
+      >
+        <Space direction="vertical" className="w-full">
+          {GROUPABLE_COLS.map((key) => {
+            const checked = groupBy.includes(key);
+            return (
+              <Checkbox
+                key={key}
+                checked={checked}
+                onChange={(e) => {
+                  setGroupBy((prev) => (e.target.checked ? [...prev, key] : prev.filter((k) => k !== key)));
+                }}
+              >
+                {key}
+              </Checkbox>
+            );
+          })}
+          {groupBy.length > 1 && (
+            <div className="text-xs text-gray-500">Group order: {groupBy.join(" → ")}</div>
+          )}
+        </Space>
+      </Modal>
+
+      {/* Aggregation Modal */}
+      <Modal
+        title="Configure Aggregations"
+        open={aggOpen}
+        onOk={() => setAggOpen(false)}
+        onCancel={() => setAggOpen(false)}
+      >
+        <Space direction="vertical" className="w-full">
+          {NUMERIC_COLS.map((key) => (
+            <div key={key} className="flex items-center justify-between">
+              <div className="font-medium">{key}</div>
+              <Select
+                value={aggs[key] ?? "none"}
+                onChange={(val) => setAggs((a) => ({ ...a, [key]: val as AggOp }))}
+                style={{ width: 200 }}
+                options={[
+                  { label: "None", value: "none" },
+                  { label: "Total (Sum)", value: "sum" },
+                  { label: "Average", value: "avg" },
+                  { label: "Min", value: "min" },
+                  { label: "Max", value: "max" },
+                  { label: "Count", value: "count" },
+                ]}
+              />
+            </div>
+          ))}
+        </Space>
+      </Modal>
 
       {/* Save / Save As New */}
       <Modal
@@ -752,17 +1040,52 @@ export default function ReportTablePage() {
 
     {/* Bottom: footer pinned */}
     {!collapsed && (
-      <div className="mt-auto p-4 text-xs">
-        <div>© 2024 Company Name</div>
-        <div>
-          <a href="#">Terms of Use</a> | <a href="#">Privacy</a>
-        </div>
-        <div>
-          <a href="#">Cookies</a> | <a href="#">Help</a>
-        </div>
-        <div className="flex mt-4"><div className="flex-1"><img src="https://www.realtimereservation.com/wp-content/uploads/2025/08/poweredbyRTR.svg" width="100px"/></div>
-        <div className="flex-2 absolute bottom-4 right-4 text-xs">v2024.02</div>
-      </div></div>
+      <div className="mt-auto p-4">
+  {/* Company Name */}
+  <div className="font-bold text-[11px] grey">UrBrand Resort & Spa</div>
+
+  {/* Address */}
+  <div className="text-[10px] ml-4 mt-1">
+    <EnvironmentOutlined className="mr-1" />
+    <a
+      href="https://maps.google.com?q=1111 Streetname Somecity Somestate 88888"
+      target="_blank"
+      rel="noopener noreferrer"
+    >
+      1111 Streetname,
+    </a>
+    <br />
+    <span className="ml-5">Somecity, Somestate 88888</span>
+  </div>
+
+  {/* Phone */}
+  <div className="text-[10px] ml-4 mt-1">
+    <PhoneOutlined className="mr-1" />
+    <a href="tel:5555555555">(555) 555-5555</a>
+  </div>
+
+  {/* Website */}
+  <div className="text-[10px] ml-4 mt-1">
+    <GlobalOutlined className="mr-1" />
+    UrBrand Resort & Spa
+  </div>
+
+  {/* Spacer */}
+  <div className="mt-3 text-[10px]">
+    <a href="#">Terms of Use</a> |{" "}
+    <a href="#">Privacy & Cookie Policy</a>
+  </div>
+
+  {/* Powered by + Version */}
+  <div className="flex items-end mt-3">
+    <img
+      src="https://www.realtimereservation.com/wp-content/uploads/2025/08/poweredbyRTR.svg"
+      width="100"
+      alt="Powered by RTR"
+    />
+    <div className="ml-auto text-[10px]">v2024.02</div>
+  </div>
+</div>
     )}
   </div>
 </Sider>
@@ -776,5 +1099,3 @@ export default function ReportTablePage() {
     </Layout>
   );
 }
-
-
