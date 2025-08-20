@@ -12,13 +12,18 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       theme={{
         algorithm: theme.defaultAlgorithm,
         token: {
-          colorPrimary: "#1677ff",
-          borderRadius: 6,
+          colorPrimary: theme.defaultSeed.purple, // resolves to cyan-6
+          borderRadius: 4,
           fontSize: 14,
         },
+         components: {
+      Menu: {
+        subMenuItemBg: "#fff", // override submenu item container
+      },},
       }}
     >
       <App />
     </ConfigProvider>
   </React.StrictMode>
 );
+

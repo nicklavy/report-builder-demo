@@ -1,6 +1,6 @@
 import {
   MenuOutlined,
-  CloseOutlined,
+  ArrowLeftOutlined,
  FundTwoTone,
 CarryOutTwoTone,
 ContactsTwoTone,
@@ -62,7 +62,7 @@ function AppHeader({
         className="p-2 rounded hover:bg-gray-100"
         onClick={onToggle}
       >
-        {collapsed ? <MenuOutlined /> : <CloseOutlined />}
+        {collapsed ? <MenuOutlined /> : <ArrowLeftOutlined />}
       </button>
 
       {/* Placeholder logo */}
@@ -546,7 +546,7 @@ function ReportBuilderTable() {
     <div className="p-6">
       {/* Header row inside content */}
       <div className="mb-4 flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Sales Report — ProTable Demo</h1>
+        <h1 className="text-2xl font-semibold">Sales Report — ProTable Demo</h1>
         <div className="flex gap-2">
           <Button onClick={clearAll}>Clear All</Button>
           <Button onClick={() => setSaveOpen("save")}>Save</Button>
@@ -650,72 +650,124 @@ export default function ReportTablePage() {
 
       {/* Everything below header */}
       <Layout>
-        <Sider
-          width={240}
-          collapsedWidth={0}               // fully hides on mobile
-          collapsible
-          collapsed={collapsed}
-          trigger={null}                   // no default chevron
-          breakpoint="lg"                  // auto-collapse < 1024px
-          onBreakpoint={(broken) => {
-            setIsMobile(broken);
-            if (broken) {
-              // entering mobile: close it
-              setCollapsed(true);
-            } else {
-              // back to desktop: open it
-              setCollapsed(false);
-            }
-          }}
-          style={{
-            background: "#fff",
-            borderRight: "1px solid #f0f0f0",
-            transition: "all 0.2s ease",
-          }}
-        >
-          <Menu
-            mode="inline"
-            theme="light"
-            defaultSelectedKeys={["dashboard"]}
-            items={[
-              { key: "bookingconsole", icon: <CarryOutTwoTone twoToneColor="#6e60d9"/>, label: "Booking Console", children: [
-      { key: "console:calendar", label: "Overview" },
-      { key: "console:appointments", label: "Appointments" },
-      { key: "console:dashboard", label: "Dashboard" },
-    ],},
-              { key: "customers",   icon: <ContactsTwoTone twoToneColor="#6e60d9"/>,  label: "Customers", children: [
-      { key: "customers:directory", label: "Client Directory" },
-      { key: "customers:communications", label: "Communications" },
-      { key: "console:dashboard", label: "Dashboard" },
-    ],},
-              { key: "staff", icon: <IdcardTwoTone twoToneColor="#6e60d9"/>,  label: "Staff", children: [
-      { key: "staff:directory", label: "Staff Directory" },
-      { key: "staff:timecard", label: "timecard" },
-    ],},
-              { key: "reporting",  icon: <FundTwoTone twoToneColor="#6e60d9"/>,   label: "Reporting", children: [
-      { key: "reporting:reports", label: "Reports" },
-      { key: "reporting:datasources", label: "Data Sources" },
-    ],},
+<Sider
+  width={240}
+  collapsedWidth={0}
+  collapsible
+  collapsed={collapsed}
+  trigger={null}
+  breakpoint="lg"
+  onBreakpoint={(broken) => {
+    setIsMobile(broken);
+    if (broken) setCollapsed(true);
+    else setCollapsed(false);
+  }}
+  style={{
+    background: "#fff",
+    borderRight: "1px solid #f0f0f0",
+    transition: "all 0.2s ease",
+    padding: 0, // avoid default inner padding that can add space
+  }}
+>
+  <div className="flex h-full flex-col">
+    {/* Top: nav menu takes the available space */}
+    <Menu
+      mode="inline"
+      theme="light"
+      defaultSelectedKeys={["reporting:reports"]}
+      items={[
+        {
+          key: "bookingconsole",
+          icon: <CarryOutTwoTone twoToneColor="#b37feb" />,
+          label: "Booking Console",
+          children: [
+            { key: "console:calendar", label: "Overview" },
+            { key: "console:appointments", label: "Appointments" },
+            { key: "console:orders", label: "Orders" },
+            { key: "console:dashboard", label: "Dashboard" },
+            
+          ],
+        },
+        {
+          key: "customers",
+          icon: <ContactsTwoTone twoToneColor="#b37feb" />,
+          label: "Customers",
+          children: [
+            { key: "customers:directory", label: "Client Directory" },
+            { key: "customers:communications", label: "Communications" },
+          ],
+        },
+        {
+          key: "staff",
+          icon: <IdcardTwoTone twoToneColor="#b37feb" />,
+          label: "Staff",
+          children: [
+            { key: "staff:directory", label: "Staff Directory" },
+            { key: "staff:timecard", label: "timecard" },
+          ],
+        },
+        {
+          key: "reporting",
+          icon: <FundTwoTone twoToneColor="#b37feb" />,
+          label: "Reporting",
+          children: [
+            { key: "reporting:reports", label: "Reports" },
+            { key: "reporting:datasources", label: "Data Sources" },
+          ],
+        },
+        {
+          key: "resources",
+          icon: <AppstoreTwoTone twoToneColor="#b37feb" />,
+          label: "Resources",
+          children: [
+            { key: "resources:rooms", label: "Rooms" },
+            { key: "resources:equipment", label: "Equipment" },
+            { key: "resources:services", label: "Services" },
+          ],
+        },
+        {
+          key: "retail",
+          icon: <ShopTwoTone twoToneColor="#b37feb" />,
+          label: "Retail",
+          children: [
+            { key: "retail:products", label: "Products" },
+            { key: "retail:inventory", label: "Inventory" },
+          ],
+        },
+        {
+          key: "settings",
+          icon: <SettingTwoTone twoToneColor="#b37feb" />,
+          label: "Settings",
+          children: [
+            { key: "settings:schedule", label: "Schedule" },
+            { key: "settings:theme", label: "Theme" },
+            { key: "settings:calendar", label: "Calendar" },
+            { key: "settings:tags", label: "Tags" },
+          ],
+        },
+      ]}
+      style={{ borderRight: 0, background: "#fff" }}
+      className="flex-1 overflow-auto"
+    />
 
-     { key: "resources",  icon: <AppstoreTwoTone twoToneColor="#6e60d9"/>,   label: "Resources", children: [
-      { key: "resources:rooms", label: "Rooms" },
-      { key: "resources:equipment", label: "Equipment" },
-      { key: "resources:services", label: "Services" },
-    ],},
-     { key: "retail",  icon: <ShopTwoTone twoToneColor="#6e60d9"/>,   label: "Retail", children: [
-      { key: "retail:products", label: "Products" },
-      { key: "retail:inventory", label: "Inventory" },
-    ],},
-     { key: "settings",  icon: <SettingTwoTone twoToneColor="#6e60d9"/>,   label: "Settings", children: [
-      { key: "settings:schedule", label: "Schedule" },
-      { key: "settings:theme", label: "Theme" },
-      { key: "settings:calendar", label: "Calendar" },
-      { key: "settings:tags", label: "Tags" },
-    ],},
-            ]}
-            style={{ borderRight: 0, background: "#fff" }}
-          />
-        </Sider>
+    {/* Bottom: footer pinned */}
+    {!collapsed && (
+      <div className="mt-auto p-4 text-xs">
+        <div>© 2024 Company Name</div>
+        <div>
+          <a href="#">Terms of Use</a> | <a href="#">Privacy</a>
+        </div>
+        <div>
+          <a href="#">Cookies</a> | <a href="#">Help</a>
+        </div>
+        <div className="flex mt-4"><div className="flex-1"><img src="https://www.realtimereservation.com/wp-content/uploads/2025/08/poweredbyRTR.svg" width="100px"/></div>
+        <div className="flex-2 absolute bottom-4 right-4 text-xs">v2024.02</div>
+      </div></div>
+    )}
+  </div>
+</Sider>
+
+        
 
         <Content className="p-6 bg-gray-50">
           <ReportBuilderTable />
