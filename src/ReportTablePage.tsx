@@ -1,13 +1,13 @@
 import {
   MenuOutlined,
   ArrowLeftOutlined,
- FundTwoTone,
-CarryOutTwoTone,
-ContactsTwoTone,
-SettingTwoTone,
-AppstoreTwoTone,
-ShopTwoTone,
-IdcardTwoTone,
+ FundFilled,
+CarryOutFilled,
+ContactsFilled,
+SettingFilled,
+AppstoreFilled,
+ShopFilled,
+IdcardFilled,
 EnvironmentOutlined,
   PhoneOutlined,
   GlobalOutlined,
@@ -73,7 +73,7 @@ function AppHeader({
       <div className="text-lg font-bold"><img
           src="https://www.realtimereservation.com/wp-content/uploads/2025/08/RTW.svg"
           alt="Logo"
-         width="150px"
+         width="180px"
          height="auto"
         /></div>
 
@@ -966,7 +966,7 @@ export default function ReportTablePage() {
       items={[
         {
           key: "bookingconsole",
-          icon: <CarryOutTwoTone twoToneColor="#b37feb" />,
+          icon: <CarryOutFilled style={{ fontSize: '18px', color: '#8581AA'}}/>,
           label: "Booking Console",
           children: [
             { key: "console:calendar", label: "Overview" },
@@ -978,7 +978,7 @@ export default function ReportTablePage() {
         },
         {
           key: "customers",
-          icon: <ContactsTwoTone twoToneColor="#b37feb" />,
+          icon: <ContactsFilled style={{ fontSize: '18px', color: '#8581AA'}}/>,
           label: "Customers",
           children: [
             { key: "customers:directory", label: "Client Directory" },
@@ -987,7 +987,7 @@ export default function ReportTablePage() {
         },
         {
           key: "staff",
-          icon: <IdcardTwoTone twoToneColor="#b37feb" />,
+          icon: <IdcardFilled style={{ fontSize: '18px', color: '#8581AA'}}/>,
           label: "Staff",
           children: [
             { key: "staff:directory", label: "Staff Directory" },
@@ -996,7 +996,7 @@ export default function ReportTablePage() {
         },
         {
           key: "reporting",
-          icon: <FundTwoTone twoToneColor="#b37feb" />,
+          icon: <FundFilled style={{ fontSize: '18px', color: '#8581AA'}}/>,
           label: "Reporting",
           children: [
             { key: "reporting:reports", label: "Reports" },
@@ -1005,7 +1005,7 @@ export default function ReportTablePage() {
         },
         {
           key: "resources",
-          icon: <AppstoreTwoTone twoToneColor="#b37feb" />,
+          icon: <AppstoreFilled style={{ fontSize: '18px', color: '#8581AA'}}/>,
           label: "Resources",
           children: [
             { key: "resources:rooms", label: "Rooms" },
@@ -1015,7 +1015,7 @@ export default function ReportTablePage() {
         },
         {
           key: "retail",
-          icon: <ShopTwoTone twoToneColor="#b37feb" />,
+          icon: <ShopFilled style={{ fontSize: '18px', color: '#8581AA'}}/>,
           label: "Retail",
           children: [
             { key: "retail:products", label: "Products" },
@@ -1024,7 +1024,7 @@ export default function ReportTablePage() {
         },
         {
           key: "settings",
-          icon: <SettingTwoTone twoToneColor="#b37feb" />,
+          icon: <SettingFilled style={{ fontSize: '18px', color: '#8581AA'}}/>,
           label: "Settings",
           children: [
             { key: "settings:schedule", label: "Schedule" },
@@ -1045,39 +1045,35 @@ export default function ReportTablePage() {
   <div className="font-bold text-[11px] grey">UrBrand Resort & Spa</div>
 
   {/* Address */}
-  <div className="text-[10px] ml-4 mt-1">
-    <EnvironmentOutlined className="mr-1" />
+  <div className="text-[10px] mt-3">
+    <EnvironmentOutlined className="mr-2" />
     <a
       href="https://maps.google.com?q=1111 Streetname Somecity Somestate 88888"
       target="_blank"
       rel="noopener noreferrer"
-    >
-      1111 Streetname,
-    </a>
-    <br />
-    <span className="ml-5">Somecity, Somestate 88888</span>
+      className="!text-gray-500 hover:!text-gray-800 transition-colors">1111 Streetname, Somecity, ST 88888</a>
   </div>
 
   {/* Phone */}
-  <div className="text-[10px] ml-4 mt-1">
-    <PhoneOutlined className="mr-1" />
-    <a href="tel:5555555555">(555) 555-5555</a>
+  <div className="text-[10px] mt-1">
+    <PhoneOutlined className="mr-2" />
+    <a href="tel:5555555555" className="!text-gray-500 hover:!text-gray-800 transition-colors">(555) 555-5555</a>
   </div>
 
   {/* Website */}
-  <div className="text-[10px] ml-4 mt-1">
-    <GlobalOutlined className="mr-1" />
-    UrBrand Resort & Spa
+  <div className="text-[10px] mt-1">
+    <GlobalOutlined className="mr-2" />
+    <a href="http://www.urbrandresortandspa.com" className="!text-gray-500 hover:!text-gray-800 transition-colors">www.urbrandresortandspa.com</a>
   </div>
 
   {/* Spacer */}
-  <div className="mt-3 text-[10px]">
-    <a href="#">Terms of Use</a> |{" "}
-    <a href="#">Privacy & Cookie Policy</a>
+  <div className="mt-6 text-[9px]">
+    <a href="#" className="!text-gray-500 hover:!text-gray-800 transition-colors">Terms of Use</a> |{" "}
+    <a href="#" className="!text-gray-500 hover:!text-gray-800 transition-colors">Privacy & Cookie Policy</a>
   </div>
 
   {/* Powered by + Version */}
-  <div className="flex items-end mt-3">
+  <div className="flex items-end mt-10">
     <img
       src="https://www.realtimereservation.com/wp-content/uploads/2025/08/poweredbyRTR.svg"
       width="100"

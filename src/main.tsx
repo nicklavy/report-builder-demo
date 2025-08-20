@@ -2,9 +2,14 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { ConfigProvider, theme } from "antd";
+import "antd/dist/reset.css";   // keep this BEFORE your own CSS
+import "./index.css";
 import App from "./App";
-import "antd/dist/reset.css";  // AntD v5 reset
-import "./index.css";          // Tailwind output (from your v4 CLI watcher/build)
+
+// Optional: Tailwind color import (works if using ESM)
+import colors from "tailwindcss/colors.js";
+const PRIMARY = colors?.violet?.[600] ?? "#665F9E"; // or "#722ed1" for AntD purple-6
+
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
@@ -12,7 +17,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
       theme={{
         algorithm: theme.defaultAlgorithm,
         token: {
-          colorPrimary: theme.defaultSeed.purple, // resolves to cyan-6
+          colorPrimary: "#665F9E", // try "#722ed1" first to sanity check
           borderRadius: 4,
           fontSize: 14,
         },
