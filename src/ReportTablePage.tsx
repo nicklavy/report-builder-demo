@@ -1,3 +1,14 @@
+import {
+  MenuOutlined,
+  CloseOutlined,
+ FundTwoTone,
+CarryOutTwoTone,
+ContactsTwoTone,
+SettingTwoTone,
+AppstoreTwoTone,
+ShopTwoTone,
+IdcardTwoTone,
+} from "@ant-design/icons";
 import React, { useMemo, useRef, useState } from "react";
 import {
   Button,
@@ -29,22 +40,45 @@ import {
 const { Header, Sider, Content } = Layout;
 
 /* ----------------------- Header ----------------------- */
-function AppHeader() {
+function AppHeader({
+  collapsed,
+  onToggle,
+}: {
+  collapsed: boolean;
+  onToggle: () => void;
+}) {
   return (
-    <Header className="flex items-center justify-between bg-white shadow px-4">
+    <Header
+      style={{
+        background: "#fff", // force white header
+        padding: "0 16px",
+        borderBottom: "1px solid #f0f0f0",
+      }}
+      className="flex items-center justify-between"
+    >
+      {/* Global hamburger / close */}
+      <button
+        aria-label="Toggle menu"
+        className="p-2 rounded hover:bg-gray-100"
+        onClick={onToggle}
+      >
+        {collapsed ? <MenuOutlined /> : <CloseOutlined />}
+      </button>
+
       {/* Placeholder logo */}
-      <div className="flex items-center gap-2">
-        <img
-          src="https://via.placeholder.com/100x40"
+      <div className="text-lg font-bold"><img
+          src="https://www.realtimereservation.com/wp-content/uploads/2025/08/RTW.svg"
           alt="Logo"
-          className="h-10"
-        />
-      </div>
+         width="150px"
+         height="auto"
+        /></div>
+
       {/* User icon */}
       <Avatar size="large" icon={<UserOutlined />} />
     </Header>
   );
 }
+
 
 /* ------------------- Types & Mock Data ------------------- */
 type Row = {
@@ -604,28 +638,85 @@ function ReportBuilderTable() {
 /* --------------------- Page Layout Wrapper --------------------- */
 export default function ReportTablePage() {
   const [collapsed, setCollapsed] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
-      <Sider collapsible collapsed={collapsed} onCollapse={setCollapsed}>
-        <div className="text-white text-center py-4 font-bold">Menu</div>
-        <Menu
-          theme="dark"
-          mode="inline"
-          items={[
-            { key: "1", label: "Booking Console" },
-            { key: "2", label: "Customers" },
-            { key: "3", label: "Staff" },
-            { key: "4", label: "Reporting" },
-            { key: "5", label: "Resources" },
-            { key: "6", label: "Retail" },
-            { key: "7", label: "Settings" },
-            
-          ]}
-        />
-      </Sider>
+      {/* Global header with hamburger/X */}
+      <AppHeader
+        collapsed={collapsed}
+        onToggle={() => setCollapsed((c) => !c)}
+      />
+
+      {/* Everything below header */}
       <Layout>
-        <AppHeader />
+        <Sider
+          width={240}
+          collapsedWidth={0}               // fully hides on mobile
+          collapsible
+          collapsed={collapsed}
+          trigger={null}                   // no default chevron
+          breakpoint="lg"                  // auto-collapse < 1024px
+          onBreakpoint={(broken) => {
+            setIsMobile(broken);
+            if (broken) {
+              // entering mobile: close it
+              setCollapsed(true);
+            } else {
+              // back to desktop: open it
+              setCollapsed(false);
+            }
+          }}
+          style={{
+            background: "#fff",
+            borderRight: "1px solid #f0f0f0",
+            transition: "all 0.2s ease",
+          }}
+        >
+          <Menu
+            mode="inline"
+            theme="light"
+            defaultSelectedKeys={["dashboard"]}
+            items={[
+              { key: "bookingconsole", icon: <CarryOutTwoTone twoToneColor="#6e60d9"/>, label: "Booking Console", children: [
+      { key: "console:calendar", label: "Overview" },
+      { key: "console:appointments", label: "Appointments" },
+      { key: "console:dashboard", label: "Dashboard" },
+    ],},
+              { key: "customers",   icon: <ContactsTwoTone twoToneColor="#6e60d9"/>,  label: "Customers", children: [
+      { key: "customers:directory", label: "Client Directory" },
+      { key: "customers:communications", label: "Communications" },
+      { key: "console:dashboard", label: "Dashboard" },
+    ],},
+              { key: "staff", icon: <IdcardTwoTone twoToneColor="#6e60d9"/>,  label: "Staff", children: [
+      { key: "staff:directory", label: "Staff Directory" },
+      { key: "staff:timecard", label: "timecard" },
+    ],},
+              { key: "reporting",  icon: <FundTwoTone twoToneColor="#6e60d9"/>,   label: "Reporting", children: [
+      { key: "reporting:reports", label: "Reports" },
+      { key: "reporting:datasources", label: "Data Sources" },
+    ],},
+
+     { key: "resources",  icon: <AppstoreTwoTone twoToneColor="#6e60d9"/>,   label: "Resources", children: [
+      { key: "resources:rooms", label: "Rooms" },
+      { key: "resources:equipment", label: "Equipment" },
+      { key: "resources:services", label: "Services" },
+    ],},
+     { key: "retail",  icon: <ShopTwoTone twoToneColor="#6e60d9"/>,   label: "Retail", children: [
+      { key: "retail:products", label: "Products" },
+      { key: "retail:inventory", label: "Inventory" },
+    ],},
+     { key: "settings",  icon: <SettingTwoTone twoToneColor="#6e60d9"/>,   label: "Settings", children: [
+      { key: "settings:schedule", label: "Schedule" },
+      { key: "settings:theme", label: "Theme" },
+      { key: "settings:calendar", label: "Calendar" },
+      { key: "settings:tags", label: "Tags" },
+    ],},
+            ]}
+            style={{ borderRight: 0, background: "#fff" }}
+          />
+        </Sider>
+
         <Content className="p-6 bg-gray-50">
           <ReportBuilderTable />
         </Content>
@@ -633,3 +724,5 @@ export default function ReportTablePage() {
     </Layout>
   );
 }
+
+
