@@ -49,6 +49,8 @@ type AppHeaderProps = {
   collapsed: boolean;
   onToggle: () => void;
   onSwitchModule?: (key: string) => void;
+  spa?: "nashville" | "tallahassee" | "nyc";
+  onChangeSpa?: (val: "nashville" | "tallahassee" | "nyc") => void;
 };
 
 
@@ -62,7 +64,7 @@ const retailURL    = "https://www.realtimereservation.com/wp-content/uploads/202
 
 
 /* ----------------------- Header ----------------------- */
-function AppHeader({ collapsed, onToggle, onSwitchModule }: AppHeaderProps) {
+function AppHeader({ collapsed, onToggle, onSwitchModule, spa = "nashville", onChangeSpa }: AppHeaderProps) {
   const { Text } = Typography;
     const modules = [
     { key: "control",   title: "Control Center",  desc: "Admin settings and dashboard",    icon: "https://www.realtimereservation.com/wp-content/uploads/2025/08/speedometer.gif" },
@@ -159,7 +161,7 @@ const currentUser = {
             type="button"
             onClick={onToggle}
             aria-label={collapsed ? "Open menu" : "Close menu"}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[var(--ant-color-primary)]"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-white hover:bg-gray-50 hover:shadow focus:outline-none border border-transparent transition-shadow"
           >
             {collapsed ? (
               <MenuOutlined style={{ fontSize: 18 }} />
@@ -172,17 +174,34 @@ const currentUser = {
 
       {/* Center: logo (stays centered regardless of left/right) */}
       <div className="justify-self-center">
-        <img src="https://www.realtimereservation.com/wp-content/uploads/2025/08/RTW.svg" className="h-5" alt="Logo" />
+        <img src="https://www.realtimereservation.com/wp-content/uploads/2025/08/Soluna-Logo-FauxHotel.svg" className="h-8" alt="Logo" />
       </div>
 
       {/* Right: user dropdown */}
-      <div className="justify-self-end">
-        <Dropdown trigger={["click"]} placement="bottomRight" dropdownRender={() => overlay}>
-          <div className="cursor-pointer">
-            <Avatar size="default" src={currentUser.avatar} />
-          </div>
-        </Dropdown>
-      </div>
+      {/* Right: location select + user dropdown */}
+<div className="justify-self-end flex items-center gap-3">
+  <Select
+    value={spa}
+    onChange={(val) => onChangeSpa?.(val as any)}
+    style={{ width: 260 }}
+    size="middle"
+    options={[
+      { label: "Soluna Spa Nashville", value: "nashville" },
+      { label: "Soluna Spa Tallahassee", value: "tallahassee" },
+      { label: "Soluna Spa New York City", value: "nyc" },
+    ]}
+    suffixIcon={<EnvironmentOutlined />}
+    // keep popup inside the header so it doesn't get clipped
+    getPopupContainer={(node) => node.parentElement as HTMLElement}
+    placeholder="Select location"
+  />
+
+  <Dropdown trigger={["click"]} placement="bottomRight" dropdownRender={() => overlay}>
+    <div className="cursor-pointer">
+      <Avatar size="default" src={currentUser.avatar} />
+    </div>
+  </Dropdown>
+</div>
     </header>
   );
 }
@@ -1177,7 +1196,7 @@ export default function ReportTablePage() {
     {!collapsed && (
       <div className="mt-auto p-4">
   {/* Company Name */}
-  <div className="font-bold text-[11px] grey">UrBrand Resort & Spa</div>
+  <div className="font-bold text-[11px] grey">Soluna Resort & Spa</div>
 
   {/* Address */}
   <div className="text-[10px] mt-3">
@@ -1198,7 +1217,7 @@ export default function ReportTablePage() {
   {/* Website */}
   <div className="text-[10px] mt-1">
     <GlobalOutlined className="mr-2" />
-    <a href="http://www.urbrandresortandspa.com" className="!text-gray-500 hover:!text-gray-800 transition-colors">www.urbrandresortandspa.com</a>
+    <a href="http://www.realtimereservation.com" className="!text-gray-500 hover:!text-gray-800 transition-colors">www.solunaresortandspa.com</a>
   </div>
 
   {/* Spacer */}
