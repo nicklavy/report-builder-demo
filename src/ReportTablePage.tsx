@@ -1,16 +1,11 @@
+
 import {
   MenuOutlined,
   ArrowLeftOutlined,
- FundFilled,
-CarryOutFilled,
-ContactsFilled,
-SettingFilled,
-AppstoreFilled,
-ShopFilled,
-IdcardFilled,
-EnvironmentOutlined,
+  EnvironmentOutlined,
   PhoneOutlined,
   GlobalOutlined,
+  MailOutlined,
 } from "@ant-design/icons";
 import React, { useMemo, useRef, useState } from "react";
 import {
@@ -28,10 +23,16 @@ import {
   Layout,
   Avatar,
   Menu,
+  Dropdown,
+  Card,
+  Divider,
+  List,
+  Typography,
+  Tooltip,
 } from "antd";
-import { UserOutlined } from "@ant-design/icons";
 import dayjs, { Dayjs } from "dayjs";
 import { Table } from "antd";
+
 
 // Pro Components (includes ProTable types/comp)
 import {
@@ -41,47 +42,151 @@ import {
   type ColumnsState,
 } from "@ant-design/pro-components";
 
-const { Header, Sider, Content } = Layout;
+const { Sider, Content } = Layout;
 
-/* ----------------------- Header ----------------------- */
-function AppHeader({
-  collapsed,
-  onToggle,
-}: {
+
+type AppHeaderProps = {
   collapsed: boolean;
   onToggle: () => void;
-}) {
-  return (
-    <Header
-      style={{
-        background: "#fff", // force white header
-        padding: "0 16px",
-        borderBottom: "1px solid #f0f0f0",
-      }}
-      className="flex items-center justify-between"
+  onSwitchModule?: (key: string) => void;
+};
+
+
+const bookingURL   = "https://www.realtimereservation.com/wp-content/uploads/2025/08/calendar.png";
+const staffURL     = "https://www.realtimereservation.com/wp-content/uploads/2025/08/staff.png";
+const clientsURL   = "https://www.realtimereservation.com/wp-content/uploads/2025/08/clients.png";
+const reportingURL = "https://www.realtimereservation.com/wp-content/uploads/2025/08/reporting.png";
+const settingsURL  = "https://www.realtimereservation.com/wp-content/uploads/2025/08/settings.png";
+const resourcesURL = "https://www.realtimereservation.com/wp-content/uploads/2025/08/resources.png";
+const retailURL    = "https://www.realtimereservation.com/wp-content/uploads/2025/08/retail.png";
+
+
+/* ----------------------- Header ----------------------- */
+function AppHeader({ collapsed, onToggle, onSwitchModule }: AppHeaderProps) {
+  const { Text } = Typography;
+    const modules = [
+    { key: "control",   title: "Control Center",  desc: "Admin settings and dashboard",    icon: "https://www.realtimereservation.com/wp-content/uploads/2025/08/speedometer.gif" },
+    { key: "pool",      title: "Pool & Beach",    desc: "Settings, controls and dashboard", icon: "https://www.realtimereservation.com/wp-content/uploads/2025/07/sun-umbrella-1.gif" },
+    { key: "activities",title: "Activities",      desc: "Settings, controls and dashboard", icon: "https://www.realtimereservation.com/wp-content/uploads/2025/07/canoe.gif" },
+    { key: "compendium",title: "Digital Compendium", desc:"Settings, controls and dashboard", icon: "https://www.realtimereservation.com/wp-content/uploads/2025/07/ebook.gif" },
+    { key: "fnb",       title: "Food & Beverage", desc: "Settings, controls and dashboard", icon: "https://www.realtimereservation.com/wp-content/uploads/2025/07/dinner-1.gif" },
+    { key: "restaurant",title: "Restaurant",      desc: "Settings, controls and dashboard", icon: "https://www.realtimereservation.com/wp-content/uploads/2025/07/restaurant.gif" },
+    { key: "spa",       title: "Spa & Wellness",  desc: "Settings, controls and dashboard", icon: "https://www.realtimereservation.com/wp-content/uploads/2025/08/face-massage.gif" },
+  ];
+const currentUser = {
+  name: "Willie Nelson",
+  email: "willienelson@email.com",
+  avatar: "https://i.pinimg.com/280x280_RS/5e/ce/4d/5ece4dd6dd24e45f800fadf9e1daf080.jpg", // 👈 your image URL
+};
+  const overlay = (
+    <Card
+      style={{ width: 340, borderRadius: 12 }}
+      bodyStyle={{ padding: 16 }}
+      onClick={(e) => e.stopPropagation()} // keep dropdown open when clicking inside
     >
-      {/* Global hamburger / close */}
-      <button
-        aria-label="Toggle menu"
-        className="p-2 rounded hover:bg-gray-100"
-        onClick={onToggle}
+      {/* Profile */}
+     
+     
+      <div className="flex items-center gap-3">
+       <Avatar src={currentUser.avatar} size={48} />
+        <div className="min-w-0">
+          <div className="font-semibold text-[16px] leading-5">{currentUser.name}</div>
+          <div className="text-gray-500 text-[12px]">Admin Level 2</div>
+          <div className="text-gray-600 text-[12px] flex items-center gap-1">
+            <MailOutlined /> {currentUser.email}
+          </div>
+        </div>
+      </div>
+
+      <Divider style={{ margin: "12px 0" }} />
+
+      {/* Module list */}
+      <List
+        itemLayout="horizontal"
+        dataSource={modules}
+        split={false}
+        renderItem={(m, idx) => (
+          <List.Item
+            key={m.key}
+            style={{
+              padding: "8px 8px",
+              borderRadius: 8,
+              background: idx === 0 ? "#fafafa" : undefined, // subtle highlight like your mock
+              cursor: "pointer",
+            }}
+            onClick={() => {
+              onSwitchModule?.(m.key);
+              message.success(`Switched to ${m.title}`);
+            }}
+          >
+            <Space align="start">
+              <img
+                src={m.icon}
+                alt=""
+                width={28}
+                height={28}
+                style={{ borderRadius: 6, objectFit: "cover" }}
+              />
+              <div>
+                <div className="font-medium leading-5">{m.title}</div>
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  {m.desc}
+                </Text>
+              </div>
+            </Space>
+          </List.Item>
+        )}
+      />
+
+      <Button
+        block
+        size="large"
+        type="primary"
+        style={{ marginTop: 12, borderRadius: 8 }}
+        onClick={() => message.info("Logged out")}
       >
-        {collapsed ? <MenuOutlined /> : <ArrowLeftOutlined />}
-      </button>
+        Log Out
+      </Button>
+    </Card>
+  );
 
-      {/* Placeholder logo */}
-      <div className="text-lg font-bold"><img
-          src="https://www.realtimereservation.com/wp-content/uploads/2025/08/RTW.svg"
-          alt="Logo"
-         width="180px"
-         height="auto"
-        /></div>
+  return (
+    <header className="grid grid-cols-3 items-center px-4 py-2 bg-white border-b border-gray-200">
+      {/* Left: hamburger/back */}
+      <div className="flex items-center">
+        <Tooltip title={collapsed ? "Open menu" : "Close menu"} mouseEnterDelay={0.2}>
+          <button
+            type="button"
+            onClick={onToggle}
+            aria-label={collapsed ? "Open menu" : "Close menu"}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-[var(--ant-color-primary)]"
+          >
+            {collapsed ? (
+              <MenuOutlined style={{ fontSize: 18 }} />
+            ) : (
+              <ArrowLeftOutlined style={{ fontSize: 18 }} />
+            )}
+          </button>
+        </Tooltip>
+      </div>
 
-      {/* User icon */}
-      <Avatar size="large" icon={<UserOutlined />} />
-    </Header>
+      {/* Center: logo (stays centered regardless of left/right) */}
+      <div className="justify-self-center">
+        <img src="https://www.realtimereservation.com/wp-content/uploads/2025/08/RTW.svg" className="h-5" alt="Logo" />
+      </div>
+
+      {/* Right: user dropdown */}
+      <div className="justify-self-end">
+        <Dropdown trigger={["click"]} placement="bottomRight" dropdownRender={() => overlay}>
+          <div className="cursor-pointer">
+            <Avatar size="default" src={currentUser.avatar} />
+          </div>
+        </Dropdown>
+      </div>
+    </header>
   );
 }
+
 
 
 /* ------------------- Types & Mock Data ------------------- */
@@ -146,6 +251,7 @@ type GroupRow = Row & {
   __groupKey?: string;  // concatenated key of group values
   children?: Row[];
 };
+
 
 
 /* ----------------------- Helpers ----------------------- */
@@ -308,21 +414,40 @@ function ReportBuilderTable() {
         filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => {
           const current = (selectedKeys as React.Key[] as string[]) ?? (filters.category ?? []);
           return (
-            <div className="p-3 w-64">
-              <Space direction="vertical" className="w-full">
-                <Select
-                  showSearch
-                  mode="multiple"
-                  allowClear
-                  placeholder="Select categories"
-                  options={categoryOptions}
-                  onDropdownVisibleChange={(open) => {
-                    if (open && categoryOptions.length === 0) loadCategories();
-                  }}
-                  value={current}
-                  onChange={(vals) => setSelectedKeys(vals as unknown as React.Key[])}
-                  style={{ width: "100%" }}
-                />
+            <div
+              className="w-64 p-3"
+              onKeyDown={(e) => e.stopPropagation()}
+              onMouseDown={(e) => e.stopPropagation()}
+              onClick={(e) => e.stopPropagation()}
+              style={{ display: "flex", flexDirection: "column", maxHeight: 360 }}
+            >
+              {/* Scrollable content area */}
+              <div style={{ flex: 1, overflow: "auto" }}>
+                <Space direction="vertical" className="w-full">
+                  <Select
+                    showSearch
+                    mode="multiple"
+                    allowClear
+                    placeholder="Select categories"
+                    options={categoryOptions}
+                    onDropdownVisibleChange={(open) => {
+                      if (open && categoryOptions.length === 0) loadCategories();
+                    }}
+                    value={current}
+                    onChange={(vals) => setSelectedKeys(vals as unknown as React.Key[])}
+                    style={{ width: "100%" }}
+ getDropdownContainer={(triggerNode) =>
+  (triggerNode.closest('.ant-table-filter-dropdown') as HTMLElement) ||
+  (triggerNode.parentElement as HTMLElement)
+}                   maxTagCount="responsive"
+                    virtual={false}
+                    placement="topRight"
+                  />
+                </Space>
+              </div>
+
+              {/* Sticky footer with actions */}
+              <div className="pt-2 mt-2 border-t border-gray-200 bg-white" style={{ position: "sticky", bottom: 0 }}>
                 <Space className="justify-end w-full">
                   <Button
                     onClick={() => {
@@ -336,7 +461,8 @@ function ReportBuilderTable() {
                   <Button
                     type="primary"
                     onClick={() => {
-                      const arr = (current || []) as string[];
+                      const sel = (selectedKeys as React.Key[] | undefined) ?? [];
+                      const arr = sel.map((k) => String(k));
                       setFilters((f) => ({ ...f, category: arr.length ? arr : undefined }));
                       confirm();
                     }}
@@ -344,7 +470,7 @@ function ReportBuilderTable() {
                     Apply
                   </Button>
                 </Space>
-              </Space>
+              </div>
             </div>
           );
         },
@@ -361,7 +487,7 @@ function ReportBuilderTable() {
         filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => {
           const current = unpackNumberRange(selectedKeys?.[0]) ?? filters.totalSales ?? {};
           return (
-            <div className="p-3 w-64">
+            <div className="p-3 w-64" onKeyDown={(e) => e.stopPropagation()}>
               <Space direction="vertical" className="w-full">
                 <InputNumber
                   placeholder="Min"
@@ -423,7 +549,7 @@ function ReportBuilderTable() {
         filterDropdown: ({ setSelectedKeys, selectedKeys, confirm, clearFilters }) => {
           const current = unpackNumberRange(selectedKeys?.[0]) ?? filters.orders ?? {};
           return (
-            <div className="p-3 w-64">
+            <div className="p-3 w-64" onKeyDown={(e) => e.stopPropagation()}>
               <Space direction="vertical" className="w-full">
                 <InputNumber
                   placeholder="Min"
@@ -499,7 +625,7 @@ function ReportBuilderTable() {
             noEnd: false,
           };
           return (
-            <div className="p-3 w-72">
+            <div className="p-3 w-72" onKeyDown={(e) => e.stopPropagation()}>
               <Space direction="vertical" className="w-full">
                 <DatePicker.RangePicker
                   className="w-full"
@@ -520,6 +646,7 @@ function ReportBuilderTable() {
                   }}
                   allowEmpty={[false, true]}
                   placeholder={["Start date", "End date"]}
+                  getPopupContainer={(triggerNode) => triggerNode.parentElement as HTMLElement}
                 />
                 <Checkbox
                   checked={!!current.noEnd}
@@ -883,6 +1010,7 @@ function ReportBuilderTable() {
                   { label: "Max", value: "max" },
                   { label: "Count", value: "count" },
                 ]}
+                getPopupContainer={(triggerNode) => triggerNode.parentElement as HTMLElement}
               />
             </div>
           ))}
@@ -922,11 +1050,19 @@ function ReportBuilderTable() {
     </div>
   );
 }
-
+const NavIcon = ({ src, size = 18 }: { src: string; size?: number }) => (
+  <img
+    src={src}
+    width={size}
+    height={size}
+    alt=""
+    style={{ display: "inline-block" , marginRight: "12px" , marginLeft: "-2px" }}
+    onError={(e) => ((e.currentTarget.style.opacity = "0.35"))}
+  />
+);
 /* --------------------- Page Layout Wrapper --------------------- */
 export default function ReportTablePage() {
   const [collapsed, setCollapsed] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
@@ -946,7 +1082,6 @@ export default function ReportTablePage() {
   trigger={null}
   breakpoint="lg"
   onBreakpoint={(broken) => {
-    setIsMobile(broken);
     if (broken) setCollapsed(true);
     else setCollapsed(false);
   }}
@@ -966,7 +1101,7 @@ export default function ReportTablePage() {
       items={[
         {
           key: "bookingconsole",
-          icon: <CarryOutFilled style={{ fontSize: '18px', color: '#8581AA'}}/>,
+          icon: <NavIcon src={bookingURL} />,
           label: "Booking Console",
           children: [
             { key: "console:calendar", label: "Overview" },
@@ -978,7 +1113,7 @@ export default function ReportTablePage() {
         },
         {
           key: "customers",
-          icon: <ContactsFilled style={{ fontSize: '18px', color: '#8581AA'}}/>,
+          icon: <NavIcon src={clientsURL} />,
           label: "Customers",
           children: [
             { key: "customers:directory", label: "Client Directory" },
@@ -987,7 +1122,7 @@ export default function ReportTablePage() {
         },
         {
           key: "staff",
-          icon: <IdcardFilled style={{ fontSize: '18px', color: '#8581AA'}}/>,
+          icon: <NavIcon src={staffURL} />,
           label: "Staff",
           children: [
             { key: "staff:directory", label: "Staff Directory" },
@@ -996,7 +1131,7 @@ export default function ReportTablePage() {
         },
         {
           key: "reporting",
-          icon: <FundFilled style={{ fontSize: '18px', color: '#8581AA'}}/>,
+          icon: <NavIcon src={reportingURL} />,
           label: "Reporting",
           children: [
             { key: "reporting:reports", label: "Reports" },
@@ -1005,7 +1140,7 @@ export default function ReportTablePage() {
         },
         {
           key: "resources",
-          icon: <AppstoreFilled style={{ fontSize: '18px', color: '#8581AA'}}/>,
+          icon: <NavIcon src={resourcesURL} />,
           label: "Resources",
           children: [
             { key: "resources:rooms", label: "Rooms" },
@@ -1015,7 +1150,7 @@ export default function ReportTablePage() {
         },
         {
           key: "retail",
-          icon: <ShopFilled style={{ fontSize: '18px', color: '#8581AA'}}/>,
+          icon: <NavIcon src={retailURL} />,
           label: "Retail",
           children: [
             { key: "retail:products", label: "Products" },
@@ -1024,7 +1159,7 @@ export default function ReportTablePage() {
         },
         {
           key: "settings",
-          icon: <SettingFilled style={{ fontSize: '18px', color: '#8581AA'}}/>,
+          icon: <NavIcon src={settingsURL} />,
           label: "Settings",
           children: [
             { key: "settings:schedule", label: "Schedule" },
