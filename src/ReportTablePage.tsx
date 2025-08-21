@@ -6,6 +6,9 @@ import {
   PhoneOutlined,
   GlobalOutlined,
   MailOutlined,
+  PlusOutlined,
+  AppstoreOutlined,
+  UnorderedListOutlined,
 } from "@ant-design/icons";
 import React, { useMemo, useRef, useState } from "react";
 import {
@@ -334,6 +337,64 @@ const aggregateRows = (rows: Row[], aggs: Aggregations) => {
 
 /* ------------- Report Builder (advanced table) ------------- */
 function ReportBuilderTable() {
+  // ----- Saved Reports (mock data & view state) -----
+  type SavedReport = {
+    id: string;
+    name: string;
+    group: "Sales" | "Finance" | "Operations";
+    createdAt: string;
+    createdBy: string;
+    updatedAt: string;
+    updatedBy: string;
+    dataSource: string;
+    tags: string[];
+  };
+
+  const SAVED_REPORTS: SavedReport[] = Array.from({ length: 12 }).map((_, i) => {
+    const groups: SavedReport["group"][] = ["Sales", "Finance", "Operations"];
+    const group = groups[i % groups.length];
+    const names = ["Revenue by State", "Orders by Category", "Daily Bookings", "High-Value Customers"];
+    const name = names[i % names.length] + ` #${i + 1}`;
+    const createdAt = dayjs().subtract(30 + i, "day").format("YYYY-MM-DD");
+    const updatedAt = dayjs().subtract(5 + (i % 10), "day").format("YYYY-MM-DD");
+    const dataSource = ["ERP", "POS", "Bookings"][i % 3];
+    const who = ["Alex", "Sam", "Jordan", "Taylor"][i % 4];
+    const who2 = ["Riley", "Casey", "Jamie", "Morgan"][i % 4];
+    const tagsPool = [
+      "Grouping: state",
+      "Grouping: category",
+      "orders=sum",
+      "totalSales=avg",
+      "lastOrderDate: 2025-05-01 → No end",
+      "orders: 50–500",
+      "state: CA, TX",
+      "category: Electronics, Home",
+    ];
+    const tags = tagsPool.slice(0, 3 + (i % 5));
+    return {
+      id: String(i + 1),
+      name,
+      group,
+      createdAt,
+      createdBy: who,
+      updatedAt,
+      updatedBy: who2,
+      dataSource,
+      tags,
+    };
+  });
+
+  const [reportView, setReportView] = useState<"cards" | "list">("cards");
+  const [reportGroup, setReportGroup] = useState<"all" | "Sales" | "Finance" | "Operations">("all");
+
+  const groupColor = (g: SavedReport["group"]) => (g === "Sales" ? "purple" : g === "Finance" ? "geekblue" : "cyan");
+
+  const filteredReports = useMemo(() => {
+    return reportGroup === "all" ? SAVED_REPORTS : SAVED_REPORTS.filter((r) => r.group === reportGroup);
+  }, [reportGroup]);
+
+  const MAX_TAGS = 6;
+
   const actionRef = useRef<ActionType | null>(null);
 
   // Aggregation & Grouping state (must be before columns useMemo)
@@ -455,10 +516,11 @@ function ReportBuilderTable() {
                     value={current}
                     onChange={(vals) => setSelectedKeys(vals as unknown as React.Key[])}
                     style={{ width: "100%" }}
- getDropdownContainer={(triggerNode) =>
-  (triggerNode.closest('.ant-table-filter-dropdown') as HTMLElement) ||
-  (triggerNode.parentElement as HTMLElement)
-}                   maxTagCount="responsive"
+                    getPopupContainer={(triggerNode) =>
+                      (triggerNode.closest('.ant-table-filter-dropdown') as HTMLElement) ||
+                      (triggerNode.parentElement as HTMLElement)
+                    }
+                    maxTagCount="responsive"
                     virtual={false}
                     placement="topRight"
                   />
@@ -977,6 +1039,113 @@ function ReportBuilderTable() {
   }}
 />
 
+
+      {/* -------- Saved Reports (demo) -------- */}
+      <div className="mt-10">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Saved Reports</h2>
+          <Space wrap>
+            <Select
+              value={reportGroup}
+              onChange={(v) => setReportGroup(v as any)}
+              style={{ width: 180 }}
+              options={[
+                { label: "Show all groups", value: "all" },
+                { label: "Sales", value: "Sales" },
+                { label: "Finance", value: "Finance" },
+                { label: "Operations", value: "Operations" },
+              ]}
+            />
+            <Button>Create Group</Button>
+            <Button type="primary" icon={<PlusOutlined />}>New Report</Button>
+            <Select
+              value={reportView}
+              onChange={(v) => setReportView(v as any)}
+              style={{ width: 140 }}
+              options={[
+                { label: "Card view", value: "cards" },
+                { label: "List view", value: "list" },
+              ]}
+            />
+          </Space>
+        </div>
+
+        {reportView === "cards" ? (
+          <List
+            grid={{ gutter: 16, column: 3 }}
+            dataSource={filteredReports}
+            renderItem={(r) => {
+              const hidden = Math.max(0, r.tags.length - MAX_TAGS);
+              return (
+                <List.Item key={r.id}>
+                  <Card hoverable style={{ borderRadius: 10 }}>
+                    <div className="flex items-center justify-between mb-2">
+                      <Tag color={groupColor(r.group)}>{r.group}</Tag>
+                    </div>
+                    <div className="text-base font-semibold mb-2">{r.name}</div>
+
+                    <div className="text-xs text-gray-500">
+                      <div>Created: {r.createdAt} — {r.createdBy}</div>
+                      <div>Modified: {r.updatedAt} — {r.updatedBy}</div>
+                      <div>Data source: {r.dataSource}</div>
+                    </div>
+
+                    <Divider style={{ margin: "10px 0" }} />
+
+                    <div className="text-xs">
+                      <div className="mb-1 font-medium">Filters &amp; Settings</div>
+                      <Space wrap>
+                        {r.tags.slice(0, MAX_TAGS).map((t, i) => (
+                          <Tag key={i}>{t}</Tag>
+                        ))}
+                        {hidden > 0 && <Tag>+{hidden} more</Tag>}
+                      </Space>
+                    </div>
+                  </Card>
+                </List.Item>
+              );
+            }}
+          />
+        ) : (
+          <List
+            itemLayout="horizontal"
+            dataSource={filteredReports}
+            renderItem={(r) => {
+              const hidden = Math.max(0, r.tags.length - MAX_TAGS);
+              return (
+                <List.Item key={r.id}>
+                  <List.Item.Meta
+                    title={
+                      <div className="flex items-center gap-2">
+                        <Tag color={groupColor(r.group)}>{r.group}</Tag>
+                        <span className="font-medium">{r.name}</span>
+                      </div>
+                    }
+                    description={
+                      <div className="text-xs text-gray-600">
+                        <div className="flex gap-6 flex-wrap">
+                          <div>Created: {r.createdAt} — {r.createdBy}</div>
+                          <div>Modified: {r.updatedAt} — {r.updatedBy}</div>
+                          <div>Data source: {r.dataSource}</div>
+                        </div>
+                        <div className="mt-1">
+                          <span className="font-medium mr-2">Filters &amp; Settings:</span>
+                          <Space wrap>
+                            {r.tags.slice(0, MAX_TAGS).map((t, i) => (
+                              <Tag key={i}>{t}</Tag>
+                            ))}
+                            {hidden > 0 && <Tag>+{hidden} more</Tag>}
+                          </Space>
+                        </div>
+                      </div>
+                    }
+                  />
+                </List.Item>
+              );
+            }}
+          />
+        )}
+      </div>
 
       {/* Grouping Modal */}
       <Modal
