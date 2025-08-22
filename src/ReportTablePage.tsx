@@ -224,8 +224,21 @@ type Row = {
 
 
 
+
+type PresetKey =
+  | "today"
+  | "yesterday"
+  | "thisWeek"
+  | "lastWeek"
+  | "thisMonth"
+  | "lastMonth"
+  | "ytd"
+  | "past30"
+  | "past90"
+  | "allTime";
+
 type NumberRange = { min?: number; max?: number };
-type DateRange = { start?: Dayjs; end?: Dayjs; noEnd?: boolean };
+type DateRange = { start?: Dayjs; end?: Dayjs; noEnd?: boolean; preset?: PresetKey };
 
 type AggOp = "none" | "sum" | "avg" | "min" | "max" | "count";
 type Aggregations = Record<string, AggOp>;   // columnKey -> op
@@ -281,14 +294,47 @@ type GroupRow = Row & {
 const packKey = (o: unknown): React.Key => JSON.stringify(o);
 const unpackNumberRange = (k?: React.Key): NumberRange | undefined =>
   !k ? undefined : (JSON.parse(String(k)) as NumberRange);
+
 const unpackDateRange = (k?: React.Key): DateRange | undefined => {
   if (!k) return undefined;
-  const parsed = JSON.parse(String(k)) as { start: string | null; end: string | null; noEnd?: boolean };
+  const parsed = JSON.parse(String(k)) as { start: string | null; end: string | null; noEnd?: boolean; preset?: PresetKey | null };
   return {
     start: parsed.start ? dayjs(parsed.start) : undefined,
     end: parsed.end ? dayjs(parsed.end) : undefined,
     noEnd: !!parsed.noEnd,
+    preset: parsed.preset ?? undefined,
   };
+};
+// Maps a preset key to a concrete date range (uses locale week start)
+const presetToRange = (key: PresetKey, now = dayjs()): { start?: Dayjs; end?: Dayjs; noEnd?: boolean } => {
+  switch (key) {
+    case "today":
+      return { start: now.startOf("day"), end: now.endOf("day"), noEnd: false };
+    case "yesterday": {
+      const y = now.subtract(1, "day");
+      return { start: y.startOf("day"), end: y.endOf("day"), noEnd: false };
+    }
+    case "thisWeek":
+      return { start: now.startOf("week"), end: now.endOf("week"), noEnd: false };
+    case "lastWeek": {
+      const w = now.subtract(1, "week");
+      return { start: w.startOf("week"), end: w.endOf("week"), noEnd: false };
+    }
+    case "thisMonth":
+      return { start: now.startOf("month"), end: now.endOf("month"), noEnd: false };
+    case "lastMonth": {
+      const m = now.subtract(1, "month");
+      return { start: m.startOf("month"), end: m.endOf("month"), noEnd: false };
+    }
+    case "ytd":
+      return { start: now.startOf("year"), end: now.endOf("day"), noEnd: false };
+    case "past30":
+      return { start: now.subtract(30, "day").startOf("day"), end: now.endOf("day"), noEnd: false };
+    case "past90":
+      return { start: now.subtract(90, "day").startOf("day"), end: now.endOf("day"), noEnd: false };
+    case "allTime":
+      return { start: undefined, end: undefined, noEnd: true };
+  }
 };
 
 const numericInRange = (val: number, range?: NumberRange) => {
@@ -696,6 +742,7 @@ function ReportBuilderTable() {
                   ? null
                   : filters.lastOrderDate.end?.toISOString?.() ?? null,
                 noEnd: !!filters.lastOrderDate.noEnd,
+                preset: filters.lastOrderDate.preset ?? null,
               }),
             ]
           : null,
@@ -704,10 +751,57 @@ function ReportBuilderTable() {
             start: undefined,
             end: undefined,
             noEnd: false,
+            preset: undefined,
           };
+
+          const applyPack = (next: DateRange) => {
+            setSelectedKeys([
+              packKey({
+                start: next.start?.toISOString?.() ?? null,
+                end: next.noEnd ? null : next.end?.toISOString?.() ?? null,
+                noEnd: !!next.noEnd,
+                preset: next.preset ?? null,
+              }),
+            ]);
+          };
+
           return (
             <div className="p-3 w-72" onKeyDown={(e) => e.stopPropagation()}>
               <Space direction="vertical" className="w-full">
+                {/* Presets */}
+                <Select
+                  size="small"
+                  placeholder="Quick presets"
+                  value={current.preset}
+                  onChange={(val) => {
+                    if (!val) {
+                      applyPack({ ...current, preset: undefined });
+                      return;
+                    }
+                    const key = val as PresetKey;
+                    const rng = presetToRange(key, dayjs());
+                    const next: DateRange = key === "allTime"
+                      ? { start: undefined, end: undefined, noEnd: true, preset: key }
+                      : { ...rng, preset: key };
+                    applyPack(next);
+                  }}
+                  options={[
+                    { label: "— Custom —", value: undefined },
+                    { label: "Today", value: "today" },
+                    { label: "Yesterday", value: "yesterday" },
+                    { label: "This Week", value: "thisWeek" },
+                    { label: "Last Week", value: "lastWeek" },
+                    { label: "This Month", value: "thisMonth" },
+                    { label: "Last Month", value: "lastMonth" },
+                    { label: "Year to Date", value: "ytd" },
+                    { label: "Past 30 Days", value: "past30" },
+                    { label: "Past 90 Days", value: "past90" },
+                    { label: "All Time", value: "allTime" },
+                  ]}
+                  getPopupContainer={(triggerNode) => triggerNode.parentElement as HTMLElement}
+                />
+
+                {/* Date range picker */}
                 <DatePicker.RangePicker
                   className="w-full"
                   value={[
@@ -716,34 +810,26 @@ function ReportBuilderTable() {
                   ]}
                   onChange={(vals) => {
                     const [s, e] = vals || [];
-                    const next = { ...current, start: s ?? undefined, end: e ?? undefined };
-                    setSelectedKeys([
-                      packKey({
-                        start: next.start?.toISOString?.() ?? null,
-                        end: next.noEnd ? null : next.end?.toISOString?.() ?? null,
-                        noEnd: !!next.noEnd,
-                      }),
-                    ]);
+                    const next = { ...current, start: s ?? undefined, end: e ?? undefined, preset: undefined };
+                    applyPack(next);
                   }}
                   allowEmpty={[false, true]}
                   placeholder={["Start date", "End date"]}
                   getPopupContainer={(triggerNode) => triggerNode.parentElement as HTMLElement}
                 />
+
+                {/* No end date */}
                 <Checkbox
                   checked={!!current.noEnd}
                   onChange={(e) => {
-                    const next = { ...current, noEnd: e.target.checked };
-                    setSelectedKeys([
-                      packKey({
-                        start: next.start?.toISOString?.() ?? null,
-                        end: next.noEnd ? null : next.end?.toISOString?.() ?? null,
-                        noEnd: !!next.noEnd,
-                      }),
-                    ]);
+                    const next = { ...current, noEnd: e.target.checked, preset: undefined };
+                    applyPack(next);
                   }}
                 >
                   No end date
                 </Checkbox>
+
+                {/* Actions */}
                 <Space className="justify-end w-full">
                   <Button
                     onClick={() => {
@@ -758,7 +844,7 @@ function ReportBuilderTable() {
                     type="primary"
                     onClick={() => {
                       const payload: DateRange | undefined =
-                        current.start || current.end || current.noEnd ? current : undefined;
+                        current.preset || current.start || current.end || current.noEnd ? current : undefined;
                       setFilters((f) => ({ ...f, lastOrderDate: payload }));
                       confirm();
                     }}
@@ -864,10 +950,27 @@ function ReportBuilderTable() {
       value: `${filters.orders.min ?? "–"} to ${filters.orders.max ?? "–"}`,
     });
   }
-  if (filters.lastOrderDate && (filters.lastOrderDate.start || filters.lastOrderDate.end || filters.lastOrderDate.noEnd)) {
-    const s = filters.lastOrderDate.start?.format("YYYY-MM-DD") ?? "—";
-    const e = filters.lastOrderDate.noEnd ? "No end" : filters.lastOrderDate.end?.format("YYYY-MM-DD") ?? "—";
-    chips.push({ kind: "filter", key: "lastOrderDate", label: "Last Order Date", value: `${s} → ${e}` });
+  if (filters.lastOrderDate) {
+    const lr = filters.lastOrderDate;
+    if (lr.preset) {
+      const labelMap: Record<PresetKey, string> = {
+        today: "Today",
+        yesterday: "Yesterday",
+        thisWeek: "This Week",
+        lastWeek: "Last Week",
+        thisMonth: "This Month",
+        lastMonth: "Last Month",
+        ytd: "Year to Date",
+        past30: "Past 30 Days",
+        past90: "Past 90 Days",
+        allTime: "All Time",
+      };
+      chips.push({ kind: "filter", key: "lastOrderDate", label: "Last Order Date", value: labelMap[lr.preset] });
+    } else if (lr.start || lr.end || lr.noEnd) {
+      const s = lr.start?.format("YYYY-MM-DD") ?? "—";
+      const e = lr.noEnd ? "No end" : lr.end?.format("YYYY-MM-DD") ?? "—";
+      chips.push({ kind: "filter", key: "lastOrderDate", label: "Last Order Date", value: `${s} → ${e}` });
+    }
   }
 
   // Grouping chips (one per selected group column)
